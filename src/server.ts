@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import 'dotenv/config';
 
-// Initialize New Relic BEFORE anything else
 import { initializeNewRelic } from './config/newrelic';
 initializeNewRelic();
 
@@ -13,16 +12,14 @@ import { initializeDatabase } from './config/database';
 import { initializeRedis, closeRedis } from './config/redis';
 import { initializeRabbitMQ, closeRabbitMQ } from './config/rabbitmq';
 import userRoutes from './routes/user.routes';
-import logger from './utils/logger.ts';
+import logger from './utils/logger';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
 
-// Security middleware
 app.use(helmet());
 app.use(cors());
 
-// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -30,11 +27,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Body parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'OK',
@@ -43,10 +38,8 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// Routes
 app.use('/api', userRoutes);
 
-// 404 handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
@@ -54,7 +47,6 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// Error handler
 app.use((err: Error, req: Request, res: Response) => {
   logger.error('Unhandled error', { error: err });
   res.status(500).json({
@@ -63,7 +55,6 @@ app.use((err: Error, req: Request, res: Response) => {
   });
 });
 
-// Initialize application
 const startServer = async () => {
   try {
     await initializeDatabase();
@@ -81,7 +72,6 @@ const startServer = async () => {
   }
 };
 
-// Graceful shutdown
 const shutdown = async () => {
   logger.info('Shutting down gracefully...');
   await closeRedis();
