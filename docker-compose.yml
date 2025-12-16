@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  postgres_users:
+    image: postgres:15-alpine
+    container_name: user_postgres
+    environment:
+      POSTGRES_USER: user_service_user
+      POSTGRES_PASSWORD: user_service_password
+      POSTGRES_DB: user_service_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_users_data:/var/lib/postgresql/data
+    networks:
+      - microservices_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_service_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis_users:
+    image: redis:7-alpine
+    container_name: user_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_users_data:/data
+    networks:
+      - microservices_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq_users:
+    image: rabbitmq:3-management-alpine
+    container_name: user_rabbitmq
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_users_data:/var/lib/rabbitmq
+    networks:
+      - microservices_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: user_service
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      DB_HOST: postgres_users
+      DB_PORT: 5432
+      DB_USER: user_service_user
+      DB_PASSWORD: user_service_password
+      DB_NAME: user_service_db
+      JWT_SECRET: ILIACHALLENGE
+      JWT_EXPIRES_IN: 24h
+      JWT_INTERNAL_SECRET: ILIACHALLENGE_INTERNAL
+      JWT_INTERNAL_EXPIRES_IN: 1h
+      REDIS_HOST: redis_users
+      REDIS_PORT: 6379
+      RABBITMQ_URL: amqp://rabbitmq_users:5672
+      RABBITMQ_QUEUE: user_events
+      WALLET_SERVICE_URL: http://wallet-service:3001
+      WALLET_SERVICE_ENABLED: true
+      NEW_RELIC_ENABLED: false
+    depends_on:
+      postgres_users:
+        condition: service_healthy
+      redis_users:
+        condition: service_healthy
+      rabbitmq_users:
+        condition: service_healthy
+    networks:
+      - microservices_network
+    restart: unless-stopped
+
+volumes:
+  postgres_users_data:
+  redis_users_data:
+  rabbitmq_users_data:
+
+networks:
+  microservices_network:
+    driver: bridge
+    name: microservices_network
