@@ -2,7 +2,8 @@ import axios, { AxiosInstance } from 'axios';
 import { generateInternalToken } from '../utils/jwt';
 import logger from '../utils/logger';
 
-const WALLET_SERVICE_URL = process.env.WALLET_SERVICE_URL || 'http://localhost:3001';
+const WALLET_SERVICE_URL =
+  process.env.WALLET_SERVICE_URL || 'http://localhost:3001';
 const WALLET_SERVICE_ENABLED = process.env.WALLET_SERVICE_ENABLED === 'true';
 
 class WalletCommunicationService {
@@ -17,7 +18,6 @@ class WalletCommunicationService {
       },
     });
 
-    // Add interceptor to add internal JWT token
     this.client.interceptors.request.use((config) => {
       const internalToken = generateInternalToken('user-service');
       config.headers.Authorization = `Bearer ${internalToken}`;
@@ -25,9 +25,6 @@ class WalletCommunicationService {
     });
   }
 
-  /**
-   * Notify wallet service about events
-   */
   async notifyEvent(event: string, data: any): Promise<void> {
     if (!WALLET_SERVICE_ENABLED) {
       logger.info('Wallet service communication disabled', { event });
@@ -47,13 +44,9 @@ class WalletCommunicationService {
         error: error.message,
         event,
       });
-      // Don't throw - this is not critical
     }
   }
 
-  /**
-   * Get user balance from wallet service
-   */
   async getUserBalance(userId: string): Promise<any> {
     if (!WALLET_SERVICE_ENABLED) {
       return null;
@@ -71,16 +64,15 @@ class WalletCommunicationService {
     }
   }
 
-  /**
-   * Get user transactions from wallet service
-   */
   async getUserTransactions(userId: string): Promise<any> {
     if (!WALLET_SERVICE_ENABLED) {
       return null;
     }
 
     try {
-      const response = await this.client.get(`/api/internal/transactions/${userId}`);
+      const response = await this.client.get(
+        `/api/internal/transactions/${userId}`,
+      );
       return response.data;
     } catch (error: any) {
       logger.error('Failed to get user transactions from wallet service', {
@@ -94,16 +86,13 @@ class WalletCommunicationService {
 
 const walletCommunicationService = new WalletCommunicationService();
 
-/**
- * Notify wallet service about user events
- */
-export const notifyWalletService = async (event: string, data: any): Promise<void> => {
+export const notifyWalletService = async (
+  event: string,
+  data: any,
+): Promise<void> => {
   await walletCommunicationService.notifyEvent(event, data);
 };
 
-/**
- * Get user financial data from wallet service
- */
 export const getUserFinancialData = async (userId: string): Promise<any> => {
   const [balance, transactions] = await Promise.all([
     walletCommunicationService.getUserBalance(userId),
