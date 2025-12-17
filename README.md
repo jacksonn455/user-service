@@ -72,7 +72,7 @@ To install and run the project, follow these steps:
 
 1. **Clone the repository:**
     ```bash
-    git clone <your-repository-url>
+    git clone https://github.com/jacksonn455/user-service.git
     ```
 
 2. **Enter the project folder:**
