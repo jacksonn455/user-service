@@ -6,7 +6,7 @@ let redisClient: RedisClientType;
 export const initializeRedis = async (): Promise<RedisClientType> => {
   try {
     const redisUrl = `redis://${process.env.REDIS_HOST || 'localhost'}:${
-      process.env.REDIS_PORT || 6379
+      process.env.REDIS_PORT || 6380
     }`;
 
     redisClient = createClient({
