@@ -15,22 +15,18 @@ export class UserService {
 
   async register(data: RegisterDTO): Promise<AuthResponse> {
     try {
-      // Check if user already exists
       const existingUser = await this.repository.findByEmail(data.email);
       if (existingUser) {
         throw new Error('User already exists');
       }
 
-      // Create user
       const user = await this.repository.create(data);
 
-      // Generate token
       const token = generateToken({
         userId: user.id,
         email: user.email,
       });
 
-      // Publish event to RabbitMQ
       await publishMessage({
         event: 'USER_REGISTERED',
         data: {
@@ -41,7 +37,6 @@ export class UserService {
         timestamp: new Date().toISOString(),
       });
 
-      // Notify wallet service (internal communication)
       await notifyWalletService('user-created', {
         userId: user.id,
         email: user.email,
@@ -66,34 +61,28 @@ export class UserService {
 
   async login(data: LoginDTO): Promise<AuthResponse> {
     try {
-      // Find user
       const user = await this.repository.findByEmail(data.email);
       if (!user) {
         throw new Error('Invalid credentials');
       }
 
-      // Check if user is active
       if (!user.isActive) {
         throw new Error('User is inactive');
       }
 
-      // Verify password
       const isPasswordValid = await user.comparePassword(data.password);
       if (!isPasswordValid) {
         throw new Error('Invalid credentials');
       }
 
-      // Generate token
       const token = generateToken({
         userId: user.id,
         email: user.email,
       });
 
-      // Cache user data
       const redis = getRedisClient();
       await redis.setEx(`user:${user.id}`, 3600, JSON.stringify(user.toJSON()));
 
-      // Publish event to RabbitMQ
       await publishMessage({
         event: 'USER_LOGGED_IN',
         data: {
@@ -121,7 +110,6 @@ export class UserService {
 
   async getUserById(id: string): Promise<UserResponse | null> {
     try {
-      // Try cache first
       const redis = getRedisClient();
       const cached = await redis.get(`user:${id}`);
 
@@ -130,7 +118,6 @@ export class UserService {
         return JSON.parse(cached);
       }
 
-      // Get from database
       const user = await this.repository.findById(id);
 
       if (user) {
@@ -153,7 +140,7 @@ export class UserService {
   async getAllUsers(): Promise<UserResponse[]> {
     try {
       const users = await this.repository.findAll();
-      return users.map(user => user.toJSON() as UserResponse);
+      return users.map((user) => user.toJSON() as UserResponse);
     } catch (error) {
       logger.error('Error getting all users', { error });
       throw error;
