@@ -483,6 +483,7 @@ The API returns standardized error responses:
 - Centralized log storage using MongoDB
 - Test coverage and code quality analysis with SonarQube
 - CI/CD automation with quality gates
+- Loading and stress test using K6
 
 ## Gitflow & Code Review
 
